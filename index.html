@@ -181,6 +181,7 @@
                   <button id="downloadBtn" type="button" class="secondary">下载 PDF</button>
                 </div>
               </div>
+              <p id="status" class="status">准备就绪</p>
           </form>
         </article>
       </section>
@@ -188,24 +189,34 @@
 
     <div id="previewBackdrop" class="preview-backdrop"></div>
     <section id="previewFloat" class="preview-float is-mini">
-      <button id="previewToggleBtn" class="preview-mini-head" type="button">
-        <strong>简历预览</strong>
-        <span>点击展开完整预览</span>
-      </button>
+      <div class="preview-mini-head">
+        <div class="preview-mini-text">
+          <strong>简历预览</strong>
+          <span>可拖拽位置与大小</span>
+        </div>
+        <div class="preview-mini-actions">
+          <button id="previewMiniShrinkBtn" type="button" class="ghost preview-size-btn">缩小</button>
+          <button id="previewMiniGrowBtn" type="button" class="ghost preview-size-btn">放大</button>
+          <button id="previewToggleBtn" type="button" class="ghost preview-open-btn">展开</button>
+        </div>
+      </div>
 
       <div class="preview-float-panel">
-        <div class="preview-head">
+        <div id="previewDragHandle" class="preview-head">
           <h2>3. 简历预览</h2>
           <button id="previewCollapseBtn" type="button" class="ghost preview-collapse-btn">收起</button>
         </div>
-        <article id="resumePreview" class="resume-paper">
-          <h1>你的名字</h1>
-          <p class="resume-title">目标岗位</p>
-          <section>
-            <h3>个人简介</h3>
-            <p>填写信息后点击“生成 AI 简历”，可在此完整预览。</p>
-          </section>
-        </article>
+        <div class="preview-scroll">
+          <article id="resumePreview" class="resume-paper">
+            <h1>你的名字</h1>
+            <p class="resume-title">目标岗位</p>
+            <section>
+              <h3>个人简介</h3>
+              <p>填写信息后点击“生成 AI 简历”，可在此完整预览。</p>
+            </section>
+          </article>
+        </div>
+        <div id="previewResizeHandle" class="preview-resize-handle" title="拖拽调整大小"></div>
       </div>
     </section>
 

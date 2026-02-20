@@ -456,11 +456,20 @@ button.ghost {
   color: var(--ink);
   border: 1px solid var(--line);
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   text-align: left;
   padding: 10px 12px;
+  cursor: move;
+  user-select: none;
+  touch-action: none;
+}
+
+.preview-mini-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .preview-mini-head strong {
@@ -470,6 +479,29 @@ button.ghost {
 .preview-mini-head span {
   font-size: 14px;
   color: var(--muted);
+}
+
+.preview-mini-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.preview-size-btn,
+.preview-open-btn {
+  width: auto;
+  margin: 0;
+  min-width: 56px;
+  height: 32px;
+  padding: 0 12px;
+  font-size: 13px;
+  line-height: 1;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  cursor: pointer;
 }
 
 .preview-backdrop {
@@ -504,12 +536,19 @@ button.ghost {
 
 .preview-float.is-mini .preview-mini-head {
   display: flex;
+  pointer-events: auto;
+}
+
+.preview-float.is-mini {
+  pointer-events: none;
 }
 
 .preview-float.is-mini .resume-paper {
+  position: absolute;
+  left: 0;
+  top: 0;
   width: 210mm;
   max-width: none;
-  transform: scale(0.24);
   transform-origin: top left;
   margin: 0;
   pointer-events: none;
@@ -517,10 +556,17 @@ button.ghost {
 
 .preview-float.is-mini .preview-float-panel {
   display: block;
-  height: 246px;
+  position: relative;
+  height: calc(100% - 62px);
   overflow: hidden;
-  padding: 8px;
+  padding: 0;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.65), rgba(247, 242, 233, 0.8));
+  cursor: zoom-in;
+  scrollbar-width: none;
+}
+
+.preview-float.is-mini .preview-float-panel::-webkit-scrollbar {
+  display: none;
 }
 
 .preview-float.is-mini .preview-head {
@@ -529,7 +575,7 @@ button.ghost {
 
 .preview-float.is-expanded {
   width: min(1120px, calc(100vw - 36px));
-  max-height: calc(100vh - 36px);
+  height: min(96vh, 1700px);
   top: 18px;
   bottom: auto;
   left: 50%;
@@ -542,10 +588,11 @@ button.ghost {
 }
 
 .preview-float.is-expanded .preview-float-panel {
-  display: block;
+  display: flex;
+  flex-direction: column;
   padding: 14px;
-  max-height: calc(100vh - 36px);
-  overflow: auto;
+  height: 100%;
+  overflow: hidden;
   background: linear-gradient(180deg, rgba(239, 232, 219, 0.95), rgba(236, 230, 219, 0.85));
 }
 
@@ -554,12 +601,35 @@ button.ghost {
   top: 0;
   z-index: 2;
   background: inherit;
+  cursor: move;
+  user-select: none;
+  touch-action: none;
 }
 
 .preview-collapse-btn {
   width: auto;
   margin: 0;
   padding: 6px 12px;
+}
+
+.preview-scroll {
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.preview-resize-handle {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: 18px;
+  height: 18px;
+  border-right: 2px solid rgba(23, 40, 39, 0.45);
+  border-bottom: 2px solid rgba(23, 40, 39, 0.45);
+  cursor: nwse-resize;
+  opacity: 0.8;
+  display: block;
+  touch-action: none;
 }
 
 body.preview-open .preview-backdrop {
@@ -884,11 +954,11 @@ body.preview-open .preview-backdrop {
   .preview-float.is-expanded {
     width: calc(100vw - 16px);
     top: 8px;
-    max-height: calc(100vh - 16px);
+    height: calc(100vh - 16px);
   }
 
   .preview-float.is-expanded .preview-float-panel {
-    max-height: calc(100vh - 16px);
+    height: 100%;
   }
 }
 

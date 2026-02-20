@@ -6,7 +6,9 @@ const STORAGE_KEYS = {
   template: "cv_template",
   language: "cv_language",
   onePage: "cv_one_page",
-  theme: "cv_theme"
+  theme: "cv_theme",
+  previewRect: "cv_preview_rect",
+  previewMiniRect: "cv_preview_mini_rect"
 };
 
 const PLATFORM_SHARED_KEY = "";
@@ -37,7 +39,13 @@ const previewEl = document.getElementById("resumePreview");
 const previewFloat = document.getElementById("previewFloat");
 const previewBackdrop = document.getElementById("previewBackdrop");
 const previewToggleBtn = document.getElementById("previewToggleBtn");
+const previewMiniGrowBtn = document.getElementById("previewMiniGrowBtn");
+const previewMiniShrinkBtn = document.getElementById("previewMiniShrinkBtn");
 const previewCollapseBtn = document.getElementById("previewCollapseBtn");
+const previewDragHandle = document.getElementById("previewDragHandle");
+const previewResizeHandle = document.getElementById("previewResizeHandle");
+const previewMiniHead = document.querySelector(".preview-mini-head");
+const previewFloatPanel = document.querySelector(".preview-float-panel");
 const creditBalanceEl = document.getElementById("creditBalance");
 const buyBtns = Array.from(document.querySelectorAll("button[data-pack]"));
 const mockProfileSelect = document.getElementById("mockProfileSelect");
@@ -45,6 +53,10 @@ const fillMockBtn = document.getElementById("fillMockBtn");
 const oneClickTestBtn = document.getElementById("oneClickTestBtn");
 
 let resumeData = null;
+let previewRect = null;
+let previewMiniRect = null;
+let dragState = null;
+let resizeState = null;
 
 init();
 
@@ -103,24 +115,44 @@ function init() {
   oneClickTestBtn.addEventListener("click", onOneClickTest);
   refreshModelsBtn.addEventListener("click", () => loadModelsFromAPI(true));
   previewToggleBtn.addEventListener("click", togglePreviewFloat);
+  previewMiniGrowBtn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    adjustMiniPreviewHeight(180);
+  });
+  previewMiniShrinkBtn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    adjustMiniPreviewHeight(-180);
+  });
   previewCollapseBtn.addEventListener("click", (event) => {
     event.stopPropagation();
     closePreviewFloat();
   });
   previewBackdrop.addEventListener("click", closePreviewFloat);
-  previewFloat.addEventListener("click", (event) => {
-    if (!previewFloat.classList.contains("is-mini")) return;
-    if (event.target.closest(".preview-mini-head")) return;
-    openPreviewFloat();
+  previewMiniHead.addEventListener("pointerdown", onPreviewDragStart);
+  previewFloatPanel.addEventListener("click", () => {
+    if (previewFloat.classList.contains("is-mini")) openPreviewFloat();
   });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") closePreviewFloat();
   });
+  previewDragHandle.addEventListener("pointerdown", onPreviewDragStart);
+  if (previewResizeHandle) {
+    previewResizeHandle.addEventListener("pointerdown", onPreviewResizeStart);
+  }
+  previewFloat.addEventListener("transitionend", () => {
+    if (previewFloat.classList.contains("is-mini")) {
+      scheduleMiniPreviewViewportUpdate();
+    }
+  });
+  window.addEventListener("resize", onWindowResize);
 
   renderMode();
   loadModelsFromAPI(false);
   applyPreviewPrefs();
   mountInlineFieldHints();
+  previewRect = loadPreviewRect();
+  previewMiniRect = loadPreviewMiniRect();
+  applyMiniRect(previewMiniRect || getDefaultMiniRect());
 }
 
 function mountInlineFieldHints() {
@@ -143,12 +175,16 @@ function openPreviewFloat() {
   previewFloat.classList.remove("is-mini");
   previewFloat.classList.add("is-expanded");
   document.body.classList.add("preview-open");
+  applyOrInitPreviewRect();
+  clearMiniPreviewTransform();
 }
 
 function closePreviewFloat() {
   previewFloat.classList.remove("is-expanded");
   previewFloat.classList.add("is-mini");
   document.body.classList.remove("preview-open");
+  applyMiniRect(previewMiniRect || getDefaultMiniRect());
+  scheduleMiniPreviewViewportUpdate();
 }
 
 function togglePreviewFloat() {
@@ -157,6 +193,288 @@ function togglePreviewFloat() {
   } else {
     openPreviewFloat();
   }
+}
+
+function getViewportPreviewBounds() {
+  const margin = 12;
+  return {
+    margin,
+    minW: 520,
+    minH: 420,
+    maxW: window.innerWidth - margin * 2,
+    maxH: window.innerHeight - margin * 2
+  };
+}
+
+function getViewportMiniBounds() {
+  const margin = 12;
+  return {
+    margin,
+    minW: 300,
+    minH: 190,
+    maxW: Math.min(620, window.innerWidth - margin * 2),
+    maxH: Math.min(760, window.innerHeight - margin * 2)
+  };
+}
+
+function clampPreviewRect(rect) {
+  const b = getViewportPreviewBounds();
+  const width = Math.max(Math.min(rect.width, b.maxW), Math.min(b.minW, b.maxW));
+  const height = Math.max(Math.min(rect.height, b.maxH), Math.min(b.minH, b.maxH));
+  const left = Math.min(Math.max(rect.left, b.margin), window.innerWidth - width - b.margin);
+  const top = Math.min(Math.max(rect.top, b.margin), window.innerHeight - height - b.margin);
+  return { left, top, width, height };
+}
+
+function clampMiniRect(rect) {
+  const b = getViewportMiniBounds();
+  const width = Math.max(Math.min(rect.width, b.maxW), Math.min(b.minW, b.maxW));
+  const height = Math.max(Math.min(rect.height, b.maxH), Math.min(b.minH, b.maxH));
+  const left = Math.min(Math.max(rect.left, b.margin), window.innerWidth - width - b.margin);
+  const top = Math.min(Math.max(rect.top, b.margin), window.innerHeight - height - b.margin);
+  return { left, top, width, height };
+}
+
+function getDefaultPreviewRect() {
+  const width = Math.min(1120, window.innerWidth - 36);
+  const height = Math.min(window.innerHeight - 24, Math.max(860, Math.round((window.innerHeight - 24) * 0.96)));
+  const left = Math.round((window.innerWidth - width) / 2);
+  const top = 12;
+  return clampPreviewRect({ left, top, width, height });
+}
+
+function getDefaultMiniRect() {
+  const width = Math.min(460, window.innerWidth - 24);
+  const height = 420;
+  const left = window.innerWidth - width - 18;
+  const top = window.innerHeight - height - 18;
+  return clampMiniRect({ left, top, width, height });
+}
+
+function applyPreviewRect(rect) {
+  const next = clampPreviewRect(rect);
+  previewFloat.style.left = `${next.left}px`;
+  previewFloat.style.top = `${next.top}px`;
+  previewFloat.style.width = `${next.width}px`;
+  previewFloat.style.height = `${next.height}px`;
+  previewFloat.style.right = "auto";
+  previewFloat.style.bottom = "auto";
+  previewFloat.style.transform = "none";
+  previewRect = next;
+}
+
+function applyMiniRect(rect) {
+  const next = clampMiniRect(rect);
+  previewFloat.style.left = `${next.left}px`;
+  previewFloat.style.top = `${next.top}px`;
+  previewFloat.style.width = `${next.width}px`;
+  previewFloat.style.height = `${next.height}px`;
+  previewFloat.style.right = "auto";
+  previewFloat.style.bottom = "auto";
+  previewFloat.style.transform = "none";
+  previewMiniRect = next;
+  if (previewFloat.classList.contains("is-mini")) {
+    scheduleMiniPreviewViewportUpdate();
+  }
+}
+
+function adjustMiniPreviewHeight(delta) {
+  const current = previewMiniRect || getDefaultMiniRect();
+  applyMiniRect({
+    left: current.left,
+    top: current.top,
+    width: current.width,
+    height: current.height + delta
+  });
+  savePreviewMiniRect();
+}
+
+function savePreviewRect() {
+  if (!previewRect) return;
+  localStorage.setItem(STORAGE_KEYS.previewRect, JSON.stringify(previewRect));
+}
+
+function savePreviewMiniRect() {
+  if (!previewMiniRect) return;
+  localStorage.setItem(STORAGE_KEYS.previewMiniRect, JSON.stringify(previewMiniRect));
+}
+
+function loadPreviewRect() {
+  const raw = localStorage.getItem(STORAGE_KEYS.previewRect);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (
+      typeof parsed?.left === "number" &&
+      typeof parsed?.top === "number" &&
+      typeof parsed?.width === "number" &&
+      typeof parsed?.height === "number"
+    ) {
+      const normalized = clampPreviewRect(parsed);
+      if (normalized.height < 760) return null;
+      return normalized;
+    }
+  } catch {}
+  return null;
+}
+
+function loadPreviewMiniRect() {
+  const raw = localStorage.getItem(STORAGE_KEYS.previewMiniRect);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (
+      typeof parsed?.left === "number" &&
+      typeof parsed?.top === "number" &&
+      typeof parsed?.width === "number" &&
+      typeof parsed?.height === "number"
+    ) {
+      return clampMiniRect(parsed);
+    }
+  } catch {}
+  return null;
+}
+
+function applyOrInitPreviewRect() {
+  applyPreviewRect(previewRect || getDefaultPreviewRect());
+}
+
+function onPreviewDragStart(event) {
+  if (event.target.closest("button")) return;
+  if (event.button !== 0) return;
+  event.preventDefault();
+  const isMini = previewFloat.classList.contains("is-mini");
+  const currentRect = isMini
+    ? previewMiniRect || getDefaultMiniRect()
+    : previewRect || getDefaultPreviewRect();
+  dragState = {
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    startLeft: currentRect.left,
+    startTop: currentRect.top,
+    mode: isMini ? "mini" : "expanded"
+  };
+  window.addEventListener("pointermove", onPreviewDragMove);
+  window.addEventListener("pointerup", onPreviewDragEnd);
+}
+
+function onPreviewDragMove(event) {
+  if (!dragState) return;
+  if (event.pointerId !== dragState.pointerId) return;
+  const left = dragState.startLeft + (event.clientX - dragState.startX);
+  const top = dragState.startTop + (event.clientY - dragState.startY);
+  if (dragState.mode === "mini") {
+    const rect = previewMiniRect || getDefaultMiniRect();
+    applyMiniRect({ left, top, width: rect.width, height: rect.height });
+  } else {
+    const rect = previewRect || getDefaultPreviewRect();
+    applyPreviewRect({ left, top, width: rect.width, height: rect.height });
+  }
+}
+
+function onPreviewDragEnd() {
+  if (!dragState) return;
+  if (dragState.mode === "mini") savePreviewMiniRect();
+  if (dragState.mode === "expanded") savePreviewRect();
+  dragState = null;
+  window.removeEventListener("pointermove", onPreviewDragMove);
+  window.removeEventListener("pointerup", onPreviewDragEnd);
+}
+
+function onPreviewResizeStart(event) {
+  if (event.button !== 0) return;
+  event.preventDefault();
+  const isMini = previewFloat.classList.contains("is-mini");
+  const currentRect = isMini
+    ? previewMiniRect || getDefaultMiniRect()
+    : previewRect || getDefaultPreviewRect();
+  resizeState = {
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    startWidth: currentRect.width,
+    startHeight: currentRect.height,
+    startLeft: currentRect.left,
+    startTop: currentRect.top,
+    mode: isMini ? "mini" : "expanded"
+  };
+  window.addEventListener("pointermove", onPreviewResizeMove);
+  window.addEventListener("pointerup", onPreviewResizeEnd);
+}
+
+function onPreviewResizeMove(event) {
+  if (!resizeState) return;
+  if (event.pointerId !== resizeState.pointerId) return;
+  const width = resizeState.startWidth + (event.clientX - resizeState.startX);
+  const height = resizeState.startHeight + (event.clientY - resizeState.startY);
+  if (resizeState.mode === "mini") {
+    applyMiniRect({ left: resizeState.startLeft, top: resizeState.startTop, width, height });
+  } else {
+    applyPreviewRect({ left: resizeState.startLeft, top: resizeState.startTop, width, height });
+  }
+}
+
+function onPreviewResizeEnd() {
+  if (!resizeState) return;
+  if (resizeState.mode === "mini") savePreviewMiniRect();
+  if (resizeState.mode === "expanded") savePreviewRect();
+  resizeState = null;
+  window.removeEventListener("pointermove", onPreviewResizeMove);
+  window.removeEventListener("pointerup", onPreviewResizeEnd);
+}
+
+function onWindowResize() {
+  if (previewRect) {
+    previewRect = clampPreviewRect(previewRect);
+    if (previewFloat.classList.contains("is-expanded")) {
+      applyPreviewRect(previewRect);
+    }
+    savePreviewRect();
+  }
+  if (previewMiniRect) {
+    previewMiniRect = clampMiniRect(previewMiniRect);
+    if (previewFloat.classList.contains("is-mini")) {
+      applyMiniRect(previewMiniRect);
+    }
+    savePreviewMiniRect();
+  }
+  if (previewFloat.classList.contains("is-mini")) {
+    scheduleMiniPreviewViewportUpdate();
+  }
+}
+
+function clearMiniPreviewTransform() {
+  previewEl.style.transform = "";
+  previewEl.style.transformOrigin = "";
+}
+
+function scheduleMiniPreviewViewportUpdate() {
+  requestAnimationFrame(updateMiniPreviewViewport);
+  setTimeout(() => {
+    if (previewFloat.classList.contains("is-mini")) {
+      updateMiniPreviewViewport();
+    }
+  }, 260);
+}
+
+function updateMiniPreviewViewport() {
+  if (!previewFloat.classList.contains("is-mini")) return;
+  if (!previewFloatPanel) return;
+
+  clearMiniPreviewTransform();
+  const panelWidth = previewFloatPanel.clientWidth;
+  const panelHeight = previewFloatPanel.clientHeight;
+  const contentWidth = previewEl.scrollWidth;
+  const contentHeight = previewEl.scrollHeight;
+
+  if (!panelWidth || !panelHeight || !contentWidth || !contentHeight) return;
+  const scale = Math.min(panelWidth / contentWidth, panelHeight / contentHeight);
+  const offsetX = (panelWidth - contentWidth * scale) / 2;
+  const offsetY = (panelHeight - contentHeight * scale) / 2;
+
+  previewEl.style.transformOrigin = "top left";
+  previewEl.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
 }
 
 function onPreviewPreferenceChanged() {
@@ -384,12 +702,16 @@ function onFillMockData() {
 async function onOneClickTest() {
   if (generateBtn.disabled) return;
   setFormData(buildMockProfile(mockProfileSelect.value));
+  if (!apiKeyInput.value.trim()) {
+    setStatus("请先在“使用我的 API Key”模式填入 Key，再执行一键测试。", true);
+    return;
+  }
+
   modeSelect.value = "own-key";
   renderMode();
   apiBaseInput.value = DEFAULT_API_BASE;
-  apiKeyInput.value = DEFAULT_API_KEY;
   localStorage.setItem(STORAGE_KEYS.apiBase, DEFAULT_API_BASE);
-  localStorage.setItem(STORAGE_KEYS.apiKey, DEFAULT_API_KEY);
+  localStorage.setItem(STORAGE_KEYS.apiKey, apiKeyInput.value.trim());
   setStatus("已注入模拟数据，正在测试生成流程...");
   await loadModelsFromAPI(false);
   await onGenerate();
@@ -418,7 +740,6 @@ async function onGenerate() {
     }
 
     renderResume(resumeData);
-    openPreviewFloat();
     setStatus("生成完成，可直接下载 PDF。", false);
   } catch (err) {
     setStatus(err.message || "生成失败，请重试。", true);
@@ -683,6 +1004,7 @@ function renderResume(data) {
       const result = autoFitOnePage();
       if (result.notice) setStatus(result.notice, result.warn);
     }
+    scheduleMiniPreviewViewportUpdate();
     return;
   }
 
@@ -690,6 +1012,7 @@ function renderResume(data) {
   previewEl.innerHTML = buildResumeHtml(fitted.data, languageMode);
   if (fitted.compactClass) previewEl.classList.add(fitted.compactClass);
   if (fitted.notice) setStatus(fitted.notice, fitted.warn);
+  scheduleMiniPreviewViewportUpdate();
 }
 
 function buildResumeHtml(data, languageMode) {
