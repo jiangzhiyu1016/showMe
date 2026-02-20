@@ -74,13 +74,14 @@ body.theme-ocean {
 }
 
 .page {
-  max-width: 1380px;
-  margin: 0 auto;
-  padding: 14px 14px 14px;
+  width: 100vw;
+  max-width: none;
+  margin: 0;
+  padding: 4px;
   height: 100vh;
   display: grid;
   grid-template-rows: auto 1fr;
-  gap: 12px;
+  gap: 6px;
   overflow: hidden;
 }
 
@@ -93,8 +94,11 @@ body.theme-ocean {
 }
 
 .hero {
-  padding: 14px 18px;
+  padding: 10px 14px;
   margin-bottom: 0;
+  min-height: 82px;
+  display: grid;
+  align-content: center;
 }
 
 .eyebrow {
@@ -105,7 +109,7 @@ body.theme-ocean {
 
 .hero h1 {
   margin: 6px 0;
-  font-size: clamp(24px, 3vw, 36px);
+  font-size: clamp(24px, 2.2vw, 34px);
   font-family: "Cormorant Garamond", serif;
   line-height: 1;
 }
@@ -119,8 +123,10 @@ body.theme-ocean {
 
 .workflow {
   display: grid;
-  grid-template-columns: minmax(360px, 1.06fr) minmax(300px, 0.8fr) minmax(380px, 1.14fr);
-  gap: 16px;
+  width: 100%;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr) minmax(0, 1.35fr);
+  gap: 6px;
   align-items: start;
   min-height: 0;
 }
@@ -128,16 +134,17 @@ body.theme-ocean {
 .form-card,
 .config-card,
 .preview-card {
-  padding: 20px;
+  padding: 14px;
   height: 100%;
   min-height: 0;
   overflow: auto;
+  border-radius: 12px;
 }
 
 h2 {
-  margin: 0 0 14px;
+  margin: 0 0 10px;
   font-family: "Cormorant Garamond", serif;
-  font-size: 30px;
+  font-size: 28px;
 }
 
 .row.two-col {
@@ -540,6 +547,7 @@ button.ghost {
 
   .workflow {
     grid-template-columns: 1fr;
+    gap: 16px;
   }
 
   .form-card,
@@ -547,6 +555,12 @@ button.ghost {
   .preview-card {
     height: auto;
     overflow: visible;
+  }
+}
+
+@media (max-width: 1500px) and (min-width: 1181px) {
+  .row.two-col {
+    grid-template-columns: 1fr;
   }
 }
 
