@@ -11,7 +11,7 @@ const STORAGE_KEYS = {
 
 const PLATFORM_SHARED_KEY = "";
 const DEFAULT_API_BASE = "https://api.moonshot.cn/v1/chat/completions";
-const DEFAULT_API_KEY = "";
+const DEFAULT_API_KEY = "sk-Lld2oG9Tygh98LT73biIOy1ymzHwSrrFAEVJM1kR9zGkWZVE";
 const DEFAULT_MODEL = "moonshot-v1-8k";
 const DEFAULT_TEMPLATE = "elegant";
 const DEFAULT_LANGUAGE = "zh";
@@ -34,6 +34,10 @@ const generateBtn = document.getElementById("generateBtn");
 const downloadBtn = document.getElementById("downloadBtn");
 const statusEl = document.getElementById("status");
 const previewEl = document.getElementById("resumePreview");
+const previewFloat = document.getElementById("previewFloat");
+const previewBackdrop = document.getElementById("previewBackdrop");
+const previewToggleBtn = document.getElementById("previewToggleBtn");
+const previewCollapseBtn = document.getElementById("previewCollapseBtn");
 const creditBalanceEl = document.getElementById("creditBalance");
 const buyBtns = Array.from(document.querySelectorAll("button[data-pack]"));
 const mockProfileSelect = document.getElementById("mockProfileSelect");
@@ -98,10 +102,61 @@ function init() {
   fillMockBtn.addEventListener("click", onFillMockData);
   oneClickTestBtn.addEventListener("click", onOneClickTest);
   refreshModelsBtn.addEventListener("click", () => loadModelsFromAPI(true));
+  previewToggleBtn.addEventListener("click", togglePreviewFloat);
+  previewCollapseBtn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    closePreviewFloat();
+  });
+  previewBackdrop.addEventListener("click", closePreviewFloat);
+  previewFloat.addEventListener("click", (event) => {
+    if (!previewFloat.classList.contains("is-mini")) return;
+    if (event.target.closest(".preview-mini-head")) return;
+    openPreviewFloat();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closePreviewFloat();
+  });
 
   renderMode();
   loadModelsFromAPI(false);
   applyPreviewPrefs();
+  mountInlineFieldHints();
+}
+
+function mountInlineFieldHints() {
+  const fields = document.querySelectorAll("input[placeholder], textarea[placeholder]");
+  fields.forEach((field) => {
+    const hintText = String(field.getAttribute("placeholder") || "").trim();
+    if (!hintText) return;
+    const label = field.closest("label");
+    if (label && !label.querySelector(".label-hint")) {
+      const hint = document.createElement("span");
+      hint.className = "label-hint";
+      hint.textContent = `（${hintText}）`;
+      label.insertBefore(hint, field);
+    }
+    field.removeAttribute("placeholder");
+  });
+}
+
+function openPreviewFloat() {
+  previewFloat.classList.remove("is-mini");
+  previewFloat.classList.add("is-expanded");
+  document.body.classList.add("preview-open");
+}
+
+function closePreviewFloat() {
+  previewFloat.classList.remove("is-expanded");
+  previewFloat.classList.add("is-mini");
+  document.body.classList.remove("preview-open");
+}
+
+function togglePreviewFloat() {
+  if (previewFloat.classList.contains("is-expanded")) {
+    closePreviewFloat();
+  } else {
+    openPreviewFloat();
+  }
 }
 
 function onPreviewPreferenceChanged() {
@@ -332,12 +387,9 @@ async function onOneClickTest() {
   modeSelect.value = "own-key";
   renderMode();
   apiBaseInput.value = DEFAULT_API_BASE;
-  if (!apiKeyInput.value.trim()) {
-    setStatus("请先在“使用我的 API Key”模式填入 Key，再执行一键测试。", true);
-    return;
-  }
+  apiKeyInput.value = DEFAULT_API_KEY;
   localStorage.setItem(STORAGE_KEYS.apiBase, DEFAULT_API_BASE);
-  localStorage.setItem(STORAGE_KEYS.apiKey, apiKeyInput.value.trim());
+  localStorage.setItem(STORAGE_KEYS.apiKey, DEFAULT_API_KEY);
   setStatus("已注入模拟数据，正在测试生成流程...");
   await loadModelsFromAPI(false);
   await onGenerate();
@@ -366,6 +418,7 @@ async function onGenerate() {
     }
 
     renderResume(resumeData);
+    openPreviewFloat();
     setStatus("生成完成，可直接下载 PDF。", false);
   } catch (err) {
     setStatus(err.message || "生成失败，请重试。", true);
