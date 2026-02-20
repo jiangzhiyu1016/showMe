@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Elegance CV Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Space+Grotesk:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="bg-orb bg-orb-a"></div>
+    <div class="bg-orb bg-orb-b"></div>
+    <main class="page">
+      <section class="hero card fade-in">
+        <p class="eyebrow">AI Resume · Pure Frontend</p>
+        <h1>优雅 AI 简历生成器</h1>
+        <p class="subtitle">
+          一次填写，智能生成。支持你自己的 API Key，也支持购买次数模式，最后一键导出 PDF。
+        </p>
+      </section>
+
+      <section class="workflow">
+        <article class="card form-card slide-up">
+          <h2>1. 填写信息</h2>
+          <form id="resumeForm">
+              <div class="row two-col">
+                <label>
+                  姓名
+                  <input name="name" required placeholder="例如：张三" />
+                </label>
+                <label>
+                  目标岗位
+                  <input name="title" required placeholder="例如：前端工程师" />
+                </label>
+              </div>
+
+              <div class="row two-col">
+                <label>
+                  邮箱
+                  <input name="email" type="email" placeholder="name@email.com" />
+                </label>
+                <label>
+                  电话
+                  <input name="phone" placeholder="138xxxx8888" />
+                </label>
+              </div>
+
+              <label>
+                个人简介
+                <textarea name="summary" rows="3" placeholder="一句话介绍你的优势"></textarea>
+              </label>
+
+              <label>
+                工作经历（每行一段）
+                <textarea
+                  name="experience"
+                  rows="5"
+                  placeholder="2023-至今｜XX公司｜前端工程师｜负责..."></textarea>
+              </label>
+
+              <label>
+                教育经历（每行一段）
+                <textarea name="education" rows="3" placeholder="2019-2023｜XX大学｜计算机科学"></textarea>
+              </label>
+
+              <label>
+                技能（逗号分隔）
+                <input name="skills" placeholder="React, TypeScript, Node.js" />
+              </label>
+
+              <label>
+                项目经历（每行一段）
+                <textarea
+                  name="projects"
+                  rows="4"
+                  placeholder="项目名｜技术栈｜结果（如提升30%性能）"></textarea>
+              </label>
+
+              <div class="mock-tools">
+                <label>
+                  快速模拟档案
+                  <select id="mockProfileSelect">
+                    <option value="frontend">前端工程师（3-5年）</option>
+                    <option value="product">产品经理（4-6年）</option>
+                    <option value="operation">运营增长（2-4年）</option>
+                  </select>
+                </label>
+                <div class="mock-actions">
+                  <button id="fillMockBtn" type="button" class="ghost">填充真实模拟数据</button>
+                  <button id="oneClickTestBtn" type="button" class="secondary">一键测试 AI 生成效果</button>
+                </div>
+              </div>
+          </form>
+        </article>
+
+        <article class="card config-card slide-up delay-1">
+          <h2>2. AI 生成设置</h2>
+
+            <label>
+              生成模式
+              <select id="modeSelect">
+                <option value="local">本地算力优先（无 API）</option>
+                <option value="own-key">使用我的 API Key</option>
+                <option value="credits">付费次数模式</option>
+              </select>
+            </label>
+
+            <div id="ownKeyBlock" class="mode-block hidden">
+              <label>
+                API 地址
+                <input id="apiBase" value="https://api.moonshot.cn/v1/chat/completions" />
+              </label>
+              <label>
+                API Key
+                <input id="apiKey" type="password" placeholder="sk-..." autocomplete="off" />
+              </label>
+              <label>
+                可用模型
+                <select id="modelSelect">
+                  <option value="moonshot-v1-8k">moonshot-v1-8k</option>
+                </select>
+              </label>
+              <button id="refreshModelsBtn" type="button" class="ghost">刷新可用模型列表</button>
+              <p class="tiny">将自动读取你当前 API Key 可访问的模型，你可以选择用于优化简历的模型。</p>
+            </div>
+
+            <div id="creditsBlock" class="mode-block hidden">
+              <p class="muted">次数余额：<strong id="creditBalance">0</strong></p>
+              <div class="buy-row">
+                <button type="button" class="ghost" data-pack="5">购买 5 次</button>
+                <button type="button" class="ghost" data-pack="20">购买 20 次</button>
+                <button type="button" class="ghost" data-pack="50">购买 50 次</button>
+              </div>
+              <p class="tiny">
+                说明：当前示例为纯前端演示购买逻辑（本地存储次数）。真实支付和安全计费需要后端服务。
+              </p>
+            </div>
+
+            <label>
+              语言风格
+              <select id="styleSelect">
+                <option value="professional">专业稳重</option>
+                <option value="creative">创意表达</option>
+                <option value="concise">简洁有力</option>
+              </select>
+            </label>
+
+            <label>
+              模板风格
+              <select id="templateSelect">
+                <option value="elegant">Elegant 经典</option>
+                <option value="modern">Modern 现代</option>
+                <option value="minimal">Minimal 极简</option>
+              </select>
+            </label>
+
+            <label>
+              主题配色
+              <select id="themeSelect">
+                <option value="sand">Sand 暖米</option>
+                <option value="forest">Forest 森绿</option>
+                <option value="ocean">Ocean 冷蓝</option>
+              </select>
+            </label>
+
+            <label>
+              输出语言
+              <select id="languageSelect">
+                <option value="zh">中文</option>
+                <option value="en">English</option>
+                <option value="bilingual">中英双语</option>
+              </select>
+            </label>
+
+            <label class="check-row">
+              <input id="onePageToggle" type="checkbox" checked />
+              自动压缩为一页 A4（预览与 PDF）
+            </label>
+
+            <div class="actions">
+              <button id="generateBtn" type="button">生成 AI 简历</button>
+              <button id="downloadBtn" type="button" class="secondary">下载 PDF</button>
+            </div>
+          <p id="status" class="status">准备就绪</p>
+        </article>
+
+        <section class="card preview-card slide-up delay-2">
+          <div class="preview-head">
+            <h2>3. 简历预览</h2>
+            <span class="muted">模板可切换，支持一页纸排版</span>
+          </div>
+          <article id="resumePreview" class="resume-paper">
+            <h1>你的名字</h1>
+            <p class="resume-title">目标岗位</p>
+            <section>
+              <h3>个人简介</h3>
+              <p>填写左侧信息后，点击“生成 AI 简历”。</p>
+            </section>
+          </article>
+        </section>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
